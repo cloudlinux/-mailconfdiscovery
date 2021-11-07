@@ -61,4 +61,3 @@ else
     echo "/var/log/exim_mainlog NOT FOUND" >> $FILE
 fi
 
-
