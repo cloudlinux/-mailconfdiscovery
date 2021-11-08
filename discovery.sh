@@ -10,8 +10,16 @@ EMAIL_REGEX="[^@<[ ]+@([^@ ])+\.[^@ >\n]+"
 DEFAULT_EXIM_LOG_PATH=/var/log
 DEFAULT_EXIM_LOGS=(exim_mainlog exim_paniclog exim_rejectlog)
 
+SMTP_PORTS=(25 465 587 2525)
+
 sec_start() { 
-  echo -n $@ ".........."
+  if [[ $1 == "-n" ]] ; then
+	nl=""
+	shift
+  else 
+	nl="-n" 
+  fi
+  echo $nl $@ ".........."
 }
 sec_end() {
     echo "done"
@@ -32,7 +40,7 @@ sec_end
 sec_start "Linux Distro"
 # Linux distro info
 echo "--- LINUX DISTROS ---" >> $FILE
-for f in `ls /etc/*release` ; do
+for f in  /etc/*release ; do
    echo "- $f" >> $FILE
    cat $f >> $FILE
 done
@@ -44,7 +52,7 @@ sec_start "Exim conf"
 echo "--- EXIM ---" >> $FILE
 if EXIM_BIN=`which exim 2>&1` ; then
     echo $EXIM_BIN >> $FILE
-    exim --version 2>&1 >> $FILE
+    exim --version &>> $FILE
     echo "--- EXIM CONFIG --- " >> $FILE
     # Exim config copy 
     if [[ -f $DEFAULT_EXIM_CONF ]] ; then
@@ -86,3 +94,19 @@ for f in ${DEFAULT_EXIM_LOGS[@]} ; do
 done
 sec_end
 
+sec_start -n "Trying direct SMTP"
+echo "--- Direct SMTP connections ---" >> $FILE
+test_mx_server=`dig +short gmail.com MX | awk '{print $2; exit}'`
+for port in ${SMTP_PORTS[@]} ; do 
+    echo -n "trying: .... $test_mx_server/$port " | tee -a $FILE
+    ( echo "HELO testserver.test" > /dev/tcp/$test_mx_server/$port ) & pid=$!
+    ( sleep 5 && kill -HUP $pid ) 2>/dev/null & watcher=$!
+    wait $pid 2>/dev/null && pkill -HUP -P $watcher 
+    status=$?
+    if [ $status -ne 0 ] ; then
+        echo "($status) CLOSED" | tee -a $FILE
+    else 
+	echo "($status) OPEN" | tee -a $FILE
+    fi
+done
+sec_end
