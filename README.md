@@ -8,7 +8,7 @@ Collects mail system related configuration, including
 * Exim mail logs (exim\_mainlog, exim\_paniclog, exim\_rejectlog)
 
 ### To run 
-`$ bash discovery`
+`$ bash discovery.sh`
 
 ## Result
 As result script produces file report in `mailconfdiscovery` directory including following files:
